@@ -4,7 +4,7 @@ highlighter:      rouge
 
 # Setup
 title:            BigToe
-tagline:          'BigToe Blog'
+tagline:          'CodingRookieH Blog'
 description:      '花样抠脚冠军的博客'
 url:              https://fongandrew.github.io/hydeout
 baseurl:          # the optional subpath of your site, e.g. "/blog"
