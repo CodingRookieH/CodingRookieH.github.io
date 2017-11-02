@@ -3,8 +3,8 @@ markdown:         kramdown
 highlighter:      rouge
 
 # Setup
-title:            CodingRookieH
-tagline:          'A Jekyll theme'
+title:            BigToe
+tagline:          'BigToe Blog'
 description:      '花样抠脚冠军的博客'
 url:              https://fongandrew.github.io/hydeout
 baseurl:          # the optional subpath of your site, e.g. "/blog"
