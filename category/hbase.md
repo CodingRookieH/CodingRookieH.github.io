@@ -1,6 +1,6 @@
 ---
 layout: category
-title: HBase
+title: HBase学习
 ---
 
 Another sample category page.
