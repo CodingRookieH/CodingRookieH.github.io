@@ -36,4 +36,4 @@ sidebar_home_link:  true
 github:
   repo:             https://github.com/fongandrew/hydeout
 
-site.disqus.shortname : https-codingrookieh-github-io
+disqus.shortname : https-codingrookieh-github-io
