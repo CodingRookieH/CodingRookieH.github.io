@@ -5,7 +5,7 @@ categories:
   - JAVA学习
 ---
 
-# JStack的使用
+## JStack的使用
 JStack是利用Thread Dump，能够让使用者看到线程的运行状态。他的使用是要比看线上日志可靠的多的，因为线上日志可能并没有处理某些异常的堆栈,因此利用JStack定位问题是很准确、快速的。
 ### 线程的状态
 JDK 1.8中我们是能够看到，线程的状态有**NEW**，**RUNNABLE**，**BLOCKED**，**WAITING**，**TIMED_WAITING**，**TERMINATED** 6种状态，其中 **NEW** 和 **TERMINATED** 没什么好说的，其他四种状态主要是
