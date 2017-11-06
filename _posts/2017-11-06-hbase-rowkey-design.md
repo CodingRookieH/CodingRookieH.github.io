@@ -5,7 +5,7 @@ comments: true
 categories:
   - HBase学习
 ---
-#### RowKey设计准则
+## RowKey设计准则
 HBase是一个key-value数据库，逻辑上看它一行可以包含多个列，列数可以不固定，这是HBase的一个优势。有一点需要注意：HBase虽然一个rowkey可以对应很多列（column），但是由于key-value数据库的性质，每存一列，rowkey就同样也要再存一次，HBase也不例外。因此rowkey如果过大，会导致存储量变得很大会导致存储量变得很大。
 HBase中的行是按照rowkey的字典顺序排序的HBase中的行是按照rowkey的字典顺序排序的，这种设计优化了scan操作，可以将相关的行以及会被一起读取的行存取在临近位置，便于scan。然而糟糕的rowkey设计是热点的源头，有可能某些具有特定特点的rowkey前缀发生大量集聚，导致读写某个regionServer的region性能下降。
 下边是一些常见的避免热点的方法：
