@@ -6,7 +6,6 @@ categories:
   - Spark学习
 ---
 
-
 ## Spark中关于数据分区
 RDD概念：Resilient Distributed Datasets  弹性分布式数据集，是一个容错的、并行的数据结构，可以让用户显式地将数据存储到磁盘和内存中，并能控制数据的分区。同时，RDD还提供了一组丰富的操作来操作这些数据。RDD是只读的记录分区的集合，只能通过在其他RDD执行确定的转换操作（transformation操作）而创建。RDD可看作一个spark的对象，它本身存在于内存中，如对文件计算是一个RDD等。
 
@@ -15,8 +14,10 @@ RDD概念：Resilient Distributed Datasets  弹性分布式数据集，是一个
 *窄依赖* : 父RDD的每个分区仅被至多一个子RDD分区使用。
 *宽依赖* : 父RDD的分区可以被多个子RDD分区使用。
 
-==注意宽依赖和窄依赖都是在父RDD的概念上理解的。==
+== 注意宽依赖和窄依赖都是在父RDD的概念上理解的。 ==
+
 上个老图：
+
 ![placeholder](http://img.blog.csdn.net/20160913233559680 "宽窄数据分区示意图")
 
 宽依赖，主要有groupByKey、reduceByKey、sortByKey等操作会产生宽依赖，会产生shuffle
