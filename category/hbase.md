@@ -3,4 +3,4 @@ layout: category
 title: HBase学习
 ---
 
-Another sample category page.
+吃土少年不畏生死扎根大数据
