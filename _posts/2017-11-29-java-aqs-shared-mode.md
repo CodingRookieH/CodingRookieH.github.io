@@ -11,7 +11,7 @@ AQS中的非共享锁,也就是我们所说的排他锁,相信大家都不陌生
 AQS中共享锁的实现，其实很多，比如大家耳熟能详的`CountDownLatch`,`ReentrantReadWriteLock`，读写锁大部分也都是用了共享锁的思想。还是按照以前看互斥锁的思路来看。
 
 ```
-　public final void acquireShared(int arg) {
+    public final void acquireShared(int arg) {
         //尝试获取锁，如果没有获取到，那么就进行下边的逻辑，这里尝试获取锁的方式有很多，
         //比如CountDownLatch中就是判断AQS中的state是否为0，也就是初始化时需要CountDown
         //的次数
