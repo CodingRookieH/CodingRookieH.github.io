@@ -11,8 +11,8 @@ AQS中的非共享锁,也就是我们所说的排他锁,相信大家都不陌生
 AQS中共享锁的实现，其实很多，比如大家耳熟能详的`CountDownLatch`,`ReentrantReadWriteLock`，读写锁大部分也都是用了共享锁的思想。还是按照以前看互斥锁的思路来看。
 
 ```
-	public final void acquireShared(int arg) {
-		//尝试获取锁，如果没有获取到，那么就进行下边的逻辑，这里尝试获取锁的方式有很多，
+　public final void acquireShared(int arg) {
+        //尝试获取锁，如果没有获取到，那么就进行下边的逻辑，这里尝试获取锁的方式有很多，
         //比如CountDownLatch中就是判断AQS中的state是否为0，也就是初始化时需要CountDown
         //的次数
         if (tryAcquireShared(arg) < 0)
@@ -22,7 +22,7 @@ AQS中共享锁的实现，其实很多，比如大家耳熟能详的`CountDownL
 下边来看具体逻辑：
 ```
     private void doAcquireShared(int arg) {
-    	//将该线程加入CLH队列中，这里Node的类型小编趟过坑，共享类型和排他类型，都会放入这个
+        //将该线程加入CLH队列中，这里Node的类型小编趟过坑，共享类型和排他类型，都会放入这个
         //类型，但是这个类型只是在Node中的nextWaiter中，不会在CLH队列中，只是一个标识，标
         //识是共享模式还是排他模式
         final Node node = addWaiter(Node.SHARED);
@@ -80,7 +80,7 @@ AQS中共享锁的实现，其实很多，比如大家耳熟能详的`CountDownL
 ```
 ```
     private void doReleaseShared() {
-		//进入循环
+        //进入循环
         for (;;) {
             Node h = head;
             if (h != null && h != tail) {
@@ -125,3 +125,5 @@ AQS中共享锁的实现，其实很多，比如大家耳熟能详的`CountDownL
 
 ```
 看到这里大家可能会有疑问，为什么release的时候又调用了之前见过的`doReleaseShared()`方法了呢。拿CountDownLatch为例，`countDown()`方法会将AQS中的state减去１，这时候所有调用`await()`方法的线程都会阻塞，直到state减到０。那么减到０后怎么办呢，那么就在这里，调用`doReleaseShared()`唤醒被阻塞的线程（也就是调用`await()`的线程，继续执行，讲到这里，CountDownLatch内部实现的机制相信大家也就知道了。
+
+本文为作者原创，转载请注明出处 。**邮箱：568718043@qq.com**
