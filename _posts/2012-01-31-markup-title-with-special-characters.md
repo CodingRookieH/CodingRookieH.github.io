@@ -2,7 +2,7 @@
 layout: post
 title: "Markup: Title with Special&nbsp;---&nbsp;Characters"
 categories:
-  - Markup
+  - 编辑示例
 tags:
   - html
   - markup

@@ -2,7 +2,7 @@
 layout: post
 title: "Edge Case: Many Tags"
 categories:
-  - Edge Case
+  - 编辑示例
 tags:
   - 8BIT
   - alignment

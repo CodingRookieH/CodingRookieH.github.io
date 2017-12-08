@@ -1,7 +1,7 @@
 ---
 layout: post
 categories:
-  - Edge Case
+  - 编辑示例
 tags:
   - edge case
   - layout

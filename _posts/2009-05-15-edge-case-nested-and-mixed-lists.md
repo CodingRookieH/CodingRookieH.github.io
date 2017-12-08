@@ -2,7 +2,7 @@
 layout: post
 title: "Edge Case: Nested and Mixed Lists"
 categories:
-  - Edge Case
+  - 编辑示例
 tags:
   - content
   - css
