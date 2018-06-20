@@ -1,12 +1,12 @@
 ---
 layout: post
-title: ON DUPLICATE KEY UPDATE引起的死锁问题
+title: 解析MYSQL中的锁
 comments: true
 categories:
   - JAVA学习
 ---
 
-## MYSQL中锁解析
+## 解析MYSQL中的锁
 在上一篇博客中，博主遇到了一个死锁的案例。但是真的要弄清楚MYSQL中的锁，确实是一件很复杂的事情。这里我只针对InnoDB引擎，介绍一些MYSQL中的锁，主要为了给各位提供一个解决死锁的思路。（当然，如果不了解MYSQL索引原理的同学，还是先了解一些MYSQL索引的原理）。
 
 ### MYSQL执行一条语句的过程是怎样的呢?
@@ -48,8 +48,7 @@ categories:
 ### 锁的类型
 MySQL 将锁分成两类：锁类型（lock_type）和锁模式（lock_mode）。锁类型就是上文中介绍的表锁和行锁两种类型，当然行锁还可以细分成记录锁和间隙锁等更细的类型，锁类型描述的锁的粒度，也可以说是把锁具体加在什么地方；而锁模式描述的是到底加的是什么锁，譬如读锁或写锁。锁模式通常是和锁类型结合使用的，锁模式在 MySQL 的源码中定义如下：
 
-```
-/* Basic lock modes */
+```/* Basic lock modes */
 enum lock_mode {
     LOCK_IS = 0, /* intention shared */
     LOCK_IX,    /* intention exclusive */
@@ -57,8 +56,7 @@ enum lock_mode {
     LOCK_X,     /* exclusive */
     LOCK_AUTO_INC,  /* locks the auto-inc counter of a table in an exclusive mode*/
     ...
-};
-```
+};```
 
 - LOCK_IS：读意向锁；
 - LOCK_IX：写意向锁；
@@ -123,8 +121,7 @@ enum lock_mode {
 
 关于 Next-key 锁，有一个比较有意思的问题，比如下面这个 orders 表（id 为主键，order_id 为二级非唯一索引）：
 
-```
-+-----+----------+
+```+-----+----------+
 |  id | order_id |
 +-----+----------+
 |   1 |        1 |
@@ -132,13 +129,11 @@ enum lock_mode {
 |   5 |        5 |
 |   7 |        5 |
 |  10 |        9 |
-+-----+----------+
-```
++-----+----------+```
 
 事务 A 执行下面的 SQL：
 
-```
-mysql> begin;
+```mysql> begin;
 mysql> select * from orders where order_id = 5 for update;
 +-----+----------+
 |  id | order_id |
@@ -146,8 +141,7 @@ mysql> select * from orders where order_id = 5 for update;
 |   5 |        5 |
 |   7 |        5 |
 +-----+----------+
-2 rows in set (0.00 sec)
-```
+2 rows in set (0.00 sec)```
 
 这个时候不仅 order_id = 5 这条记录会加上 X 记录锁，而且这条记录前后的间隙也会加上锁，加锁位置如下：
 
@@ -175,10 +169,8 @@ mysql> select * from orders where order_id = 5 for update;
 这个命令会打印出 InnoDb 的所有锁信息，包括锁 ID、事务 ID、以及每个锁的类型和模式等其他信息。第二种是使用下面的 SQL 语句：
 ```mysql> show engine innodb status\G```
 这个命令并不是专门用来查看锁信息的，而是用于输出当前 InnoDb 引擎的状态信息，包括：BACKGROUND THREAD、SEMAPHORES、TRANSACTIONS、FILE I/O、INSERT BUFFER AND ADAPTIVE HASH INDEX、LOG、BUFFER POOL AND MEMORY、ROW OPERATIONS 等等。其中 TRANSACTIONS 部分会打印当前 MySQL 所有的事务，如果某个事务有加锁，还会显示加锁的详细信息。如果发生死锁，也可以通过这个命令来定位死锁发生的原因。不过在这之前需要先打开 Innodb 的锁监控：
-```
-mysql> set global innodb_status_output = ON;
-mysql> set global innodb_status_output_locks = ON;
-```
+```mysql> set global innodb_status_output = ON;
+mysql> set global innodb_status_output_locks = ON;```
 打开锁监控之后，使用 `show engine innodb status` 命令，会输出大量的信息，我们在其中可以找到 **TRANSACTIONS** 部分，同时产生死锁时，也能更方便观察问题。
 要注意的是，只有在两个事务出现锁竞争时才能在这个表中看到锁信息，譬如你执行一条 UPDATE 语句，它会对某条记录加 X 锁，这个时候 `information_schema.innodb_locks` 表里是没有任何记录的。
 另外，只看这个表只能得到当前持有锁的事务，至于是哪个事务被阻塞，可以通过 `information_schema.innodb_lock_waits` 表来查看。
