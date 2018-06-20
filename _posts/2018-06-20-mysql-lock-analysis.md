@@ -11,14 +11,19 @@ categories:
 
 ### MYSQL执行一条语句的过程是怎样的呢?
 关于 MySQL 的索引是一个很大的话题，譬如，增删改查时 B+ 树的调整算法是怎样实现的，如何通过索引加快 SQL 的执行速度，如何优化索引，等等等等。我们这里为了加强对锁的理解，只需要了解索引的数据结构即可。当执行下面的 SQL 时（id 为 students 表的主键），我们要知道，InnoDb 存储引擎会在 id = 49 这个主键索引上加一把 X 锁。
+
 ```mysql> update students set score = 100 where id = 49;```
+
 当执行下面的 SQL 时（name 为 students 表的二级索引），InnoDb 存储引擎会在 name = 'Tom' 这个索引上加一把 X 锁，同时会通过 name = 'Tom' 这个二级索引定位到 id = 49 这个主键索引，并在 id = 49 这个主键索引上加一把 X 锁。
+
 ```mysql> update students set score = 100 where name = 'Tom';```
 
 ![placeholder](http://www.aneasystone.com/usr/uploads/2017/10/1423030488.png)
 
 像上面这样的 SQL 比较简单，只操作单条记录，如果要同时更新多条记录，加锁的过程又是什么样的呢？譬如下面的 SQL（假设 score 字段为二级索引）：
+
 ```mysql> update students set level = 3 where score >= 60;```
+
 下图展示了当用户执行这条 SQL 时，MySQL Server 和 InnoDb 之间的执行流程：
 
 ![placeholder](http://www.aneasystone.com/usr/uploads/2017/10/201797556.png)
@@ -28,7 +33,8 @@ categories:
 ### 锁的种类
 根据锁的粒度可以把锁细分为表锁和行锁，行锁根据场景的不同又可以进一步细分，在 MySQL 的源码里，定义了四种类型的行锁，如下：
 
-```define LOCK_TABLE  16  /* table lock */
+``` 
+define LOCK_TABLE  16  /* table lock */
 #define LOCK_TABLE  16  /* table lock */
 #define LOCK_REC    32  /* record lock */
 
@@ -48,7 +54,8 @@ categories:
 ### 锁的类型
 MySQL 将锁分成两类：锁类型（lock_type）和锁模式（lock_mode）。锁类型就是上文中介绍的表锁和行锁两种类型，当然行锁还可以细分成记录锁和间隙锁等更细的类型，锁类型描述的锁的粒度，也可以说是把锁具体加在什么地方；而锁模式描述的是到底加的是什么锁，譬如读锁或写锁。锁模式通常是和锁类型结合使用的，锁模式在 MySQL 的源码中定义如下：
 
-```/* Basic lock modes */
+``` 
+/* Basic lock modes */
 enum lock_mode {
     LOCK_IS = 0, /* intention shared */
     LOCK_IX,    /* intention exclusive */
@@ -56,7 +63,8 @@ enum lock_mode {
     LOCK_X,     /* exclusive */
     LOCK_AUTO_INC,  /* locks the auto-inc counter of a table in an exclusive mode*/
     ...
-};```
+};
+```
 
 - LOCK_IS：读意向锁；
 - LOCK_IX：写意向锁；
@@ -87,7 +95,9 @@ enum lock_mode {
 
 #### 记录锁
 [**记录锁**](https://dev.mysql.com/doc/refman/5.7/en/innodb-locking.html#innodb-record-locks) 是最简单的行锁，并没有什么好说的。譬如下面的 SQL 语句（id 为主键）：
+
 ```mysql> UPDATE accounts SET level = 100 WHERE id = 5;```
+
 这条 SQL 语句就会在 id = 5 这条记录上加上记录锁，防止其他事务对 id = 5 这条记录进行修改或删除。记录锁永远都是加在索引上的，就算一个表没有建索引，数据库也会隐式的创建一个索引。如果 WHERE 条件中指定的列是个二级索引，那么记录锁不仅会加在这个二级索引上，还会加在这个二级索引所对应的聚簇索引上（参考上面的加锁流程一节）。
 注意，如果 SQL 语句无法使用索引时会走主索引实现全表扫描，这个时候 MySQL 会给整张表的所有数据行加记录锁。如果一个 WHERE 条件无法通过索引快速过滤，存储引擎层面就会将所有记录加锁后返回，再由 MySQL Server 层进行过滤。不过在实际使用过程中，MySQL 做了一些改进，在 MySQL Server 层进行过滤的时候，如果发现不满足，会调用 unlock_row 方法，把不满足条件的记录释放锁（显然这违背了二段锁协议）。这样做，保证了最后只会持有满足条件记录上的锁，但是每条记录的加锁操作还是不能省略的。可见在没有索引时，不仅会消耗大量的锁资源，增加数据库的开销，而且极大的降低了数据库的并发性能，所以说，更新操作一定要记得走索引。
 
@@ -121,7 +131,8 @@ enum lock_mode {
 
 关于 Next-key 锁，有一个比较有意思的问题，比如下面这个 orders 表（id 为主键，order_id 为二级非唯一索引）：
 
-```+-----+----------+
+``` 
++-----+----------+
 |  id | order_id |
 +-----+----------+
 |   1 |        1 |
@@ -129,11 +140,13 @@ enum lock_mode {
 |   5 |        5 |
 |   7 |        5 |
 |  10 |        9 |
-+-----+----------+```
++-----+----------+
+```
 
 事务 A 执行下面的 SQL：
 
-```mysql> begin;
+``` 
+mysql> begin;
 mysql> select * from orders where order_id = 5 for update;
 +-----+----------+
 |  id | order_id |
@@ -141,7 +154,8 @@ mysql> select * from orders where order_id = 5 for update;
 |   5 |        5 |
 |   7 |        5 |
 +-----+----------+
-2 rows in set (0.00 sec)```
+2 rows in set (0.00 sec)
+```
 
 这个时候不仅 order_id = 5 这条记录会加上 X 记录锁，而且这条记录前后的间隙也会加上锁，加锁位置如下：
 
@@ -165,12 +179,20 @@ mysql> select * from orders where order_id = 5 for update;
 
 ### 在 MySQL 中观察行锁
 为了更好的理解不同的行锁，下面我们在 MySQL 中对不同的锁实际操作一把。有两种方式可以在 MySQL 中观察行锁，第一种是通过下面的 SQL 语句：
+
 ```mysql> select * from information_schema.innodb_locks;```
+
 这个命令会打印出 InnoDb 的所有锁信息，包括锁 ID、事务 ID、以及每个锁的类型和模式等其他信息。第二种是使用下面的 SQL 语句：
+
 ```mysql> show engine innodb status\G```
+
 这个命令并不是专门用来查看锁信息的，而是用于输出当前 InnoDb 引擎的状态信息，包括：BACKGROUND THREAD、SEMAPHORES、TRANSACTIONS、FILE I/O、INSERT BUFFER AND ADAPTIVE HASH INDEX、LOG、BUFFER POOL AND MEMORY、ROW OPERATIONS 等等。其中 TRANSACTIONS 部分会打印当前 MySQL 所有的事务，如果某个事务有加锁，还会显示加锁的详细信息。如果发生死锁，也可以通过这个命令来定位死锁发生的原因。不过在这之前需要先打开 Innodb 的锁监控：
-```mysql> set global innodb_status_output = ON;
-mysql> set global innodb_status_output_locks = ON;```
+
+``` 
+mysql> set global innodb_status_output = ON;
+mysql> set global innodb_status_output_locks = ON;
+```
+
 打开锁监控之后，使用 `show engine innodb status` 命令，会输出大量的信息，我们在其中可以找到 **TRANSACTIONS** 部分，同时产生死锁时，也能更方便观察问题。
 要注意的是，只有在两个事务出现锁竞争时才能在这个表中看到锁信息，譬如你执行一条 UPDATE 语句，它会对某条记录加 X 锁，这个时候 `information_schema.innodb_locks` 表里是没有任何记录的。
 另外，只看这个表只能得到当前持有锁的事务，至于是哪个事务被阻塞，可以通过 `information_schema.innodb_lock_waits` 表来查看。
