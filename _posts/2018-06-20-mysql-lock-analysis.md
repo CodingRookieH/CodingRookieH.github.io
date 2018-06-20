@@ -32,9 +32,7 @@ categories:
 
 ### 锁的种类
 根据锁的粒度可以把锁细分为表锁和行锁，行锁根据场景的不同又可以进一步细分，在 MySQL 的源码里，定义了四种类型的行锁，如下：
-
 ``` 
-define LOCK_TABLE  16  /* table lock */
 #define LOCK_TABLE  16  /* table lock */
 #define LOCK_REC    32  /* record lock */
 
@@ -43,17 +41,14 @@ define LOCK_TABLE  16  /* table lock */
 #define LOCK_REC_NOT_GAP 1024  
 #define LOCK_INSERT_INTENTION 2048 
 ```
-
 - LOCK_ORDINARY：也称为 **Next-Key Lock**，锁一条记录及其之前的间隙，这是 RR 隔离级别用的最多的锁，从名字也能看出来；
 - LOCK_GAP：间隙锁，锁两个记录之间的 GAP，防止记录插入；
 - LOCK_REC_NOT_GAP：只锁记录；
 - LOCK_INSERT_INTENSION：插入意向 GAP 锁，插入记录时使用，是 LOCK_GAP 的一种特例。
-
 这四种行锁将是理解并解决数据库死锁的关键，我们下面将深入研究这四种锁的特点。但是在介绍这四种锁之前，让我们再来看下 MySQL 下锁的模式。
 
 ### 锁的类型
 MySQL 将锁分成两类：锁类型（lock_type）和锁模式（lock_mode）。锁类型就是上文中介绍的表锁和行锁两种类型，当然行锁还可以细分成记录锁和间隙锁等更细的类型，锁类型描述的锁的粒度，也可以说是把锁具体加在什么地方；而锁模式描述的是到底加的是什么锁，譬如读锁或写锁。锁模式通常是和锁类型结合使用的，锁模式在 MySQL 的源码中定义如下：
-
 ``` 
 /* Basic lock modes */
 enum lock_mode {
@@ -65,13 +60,11 @@ enum lock_mode {
     ...
 };
 ```
-
 - LOCK_IS：读意向锁；
 - LOCK_IX：写意向锁；
 - LOCK_S：读锁；
 - LOCK_X：写锁；
 - LOCK_AUTO_INC：自增锁；
-
 将锁分为读锁和写锁主要是为了提高读的并发，如果不区分读写锁，那么数据库将没办法并发读，并发性将大大降低。而 IS（读意向）、IX（写意向）只会应用在表锁上，方便表锁和行锁之间的冲突检测。LOCK_AUTO_INC 是一种特殊的表锁。
 
 #### 读写锁
@@ -85,7 +78,6 @@ enum lock_mode {
 ![placeholder](http://www.aneasystone.com/usr/uploads/2017/10/1431433403.png)
 
 从表中我们可以清楚的看到：
-
 - X 锁和其他所有锁都有冲突。
 - IX 锁之间没有冲突（这个也是上篇博客中导致死锁的根本原因之）。
 - 其他的信息大家对号入座就好。
@@ -111,26 +103,18 @@ enum lock_mode {
 #### Next-Key Locks
 
 [**Next-key 锁**](https://dev.mysql.com/doc/refman/5.7/en/innodb-locking.html#innodb-next-key-locks) 是记录锁和间隙锁的组合，它指的是加在某条记录以及这条记录前面间隙上的锁。假设一个索引包含10、11、13 和 20 这几个值，可能的 Next-key 锁如下：
-
 - (-∞, 10]
 - (10, 11]
 - (11, 13]
 - (13, 20]
 - (20, +∞)
-
 通常我们都用这种左开右闭区间来表示 Next-key 锁，其中，圆括号表示不包含该记录，方括号表示包含该记录。前面四个都是 Next-key 锁，最后一个为间隙锁。和间隙锁一样，**在 RC 隔离级别下没有 Next-key 锁，只有 RR 隔离级别才有。**继续拿上面的 SQL 例子来说，如果 id 不是主键，而是二级索引，且不是唯一索引，那么这个 SQL 在 RR 隔离级别下会加什么锁呢？答案就是 Next-key 锁，如下：
-
 - (a, 5]
 - (5, b)
-
 其中，a 和 b 是 id = 5 前后两个索引，我们假设 a = 1、b = 10，那么此时如果插入一条 id = 3 的记录将会阻塞住。之所以要把 id = 5 前后的间隙都锁住，仍然是为了解决幻读问题，因为 id 是非唯一索引，所以 id = 5 可能会有多条记录，为了防止再插入一条 id = 5 的记录，必须将下面标记 ^ 的位置都锁住，因为这些位置都可能再插入一条 id = 5 的记录：
-
 1 ^ 5 ^ 5 ^ 5 ^ 10 11 13 15
-
 可以看出来，Next-key 锁确实可以避免幻读，但是带来的副作用是连插入 id = 3 这样的记录也被阻塞了，这根本就不会引起幻读问题的。
-
 关于 Next-key 锁，有一个比较有意思的问题，比如下面这个 orders 表（id 为主键，order_id 为二级非唯一索引）：
-
 ``` 
 +-----+----------+
 |  id | order_id |
@@ -142,9 +126,7 @@ enum lock_mode {
 |  10 |        9 |
 +-----+----------+
 ```
-
 事务 A 执行下面的 SQL：
-
 ``` 
 mysql> begin;
 mysql> select * from orders where order_id = 5 for update;
@@ -158,9 +140,7 @@ mysql> select * from orders where order_id = 5 for update;
 ```
 
 这个时候不仅 order_id = 5 这条记录会加上 X 记录锁，而且这条记录前后的间隙也会加上锁，加锁位置如下：
-
 (2,5]  ,   (5,9]   ,   (9,+∞)
-
 可以看到 (2, 9) 这个区间都被锁住了，这个时候如果插入 order_id = 4 或者 order_id = 8 这样的记录肯定会被阻塞，这没什么问题，那么现在问题来了，如果插入一条记录 order_id = 2 或者 order_id = 9 会被阻塞吗？答案是可能阻塞，也可能不阻塞，这取决于插入记录主键的值，感兴趣的读者可以参考[这篇博客](http://blog.sina.com.cn/s/blog_a1e9c7910102vnrj.html)。
 
 #### 插入意向锁
@@ -173,7 +153,6 @@ mysql> select * from orders where order_id = 5 for update;
 ![placeholder](http://www.aneasystone.com/usr/uploads/2017/11/3404508090.png)
 
 其中，**第一行表示已有的锁，第一列表示要加的锁**。这个矩阵看起来很复杂，因为它是不对称的，如果要死记硬背可能会晕掉。其实仔细看可以发现，不对称的只有插入意向锁，所以我们先对插入意向锁做个总结，如下：
-
 - 插入意向锁不影响其他事务加其他任何锁。也就是说，一个事务已经获取了插入意向锁，对其他事务是没有任何影响的；
 - 插入意向锁与间隙锁和 Next-key 锁冲突。也就是说，一个事务想要获取插入意向锁，如果有其他事务已经加了间隙锁或 Next-key 锁，则会阻塞。
 
@@ -195,7 +174,11 @@ mysql> set global innodb_status_output_locks = ON;
 
 打开锁监控之后，使用 `show engine innodb status` 命令，会输出大量的信息，我们在其中可以找到 **TRANSACTIONS** 部分，同时产生死锁时，也能更方便观察问题。
 要注意的是，只有在两个事务出现锁竞争时才能在这个表中看到锁信息，譬如你执行一条 UPDATE 语句，它会对某条记录加 X 锁，这个时候 `information_schema.innodb_locks` 表里是没有任何记录的。
-另外，只看这个表只能得到当前持有锁的事务，至于是哪个事务被阻塞，可以通过 `information_schema.innodb_lock_waits` 表来查看。
+另外，只看这个表只能得到当前持有锁的事务，至于是哪个事务被阻塞，可以通过 `information_schema.innodb_lock_waits` 表来查看。相关语句为：
+``` 
+SELECT * FROM INFORMATION_SCHEMA.INNODB_LOCKS;
+SELECT * FROM INFORMATION_SCHEMA.INNODB_LOCK_WAITS;
+```
 
 ### 参考
 
