@@ -116,12 +116,12 @@ RECORD LOCKS space id 46423 page no 4 n bits 80 index uidx_group_id_user_id of t
 
 此时我们可以清楚的看到，空间中的锁有：
 
-- 事务1（5124462）：**IX（插入意向锁，TABLE LOCK）**，**排他锁（X）**，以及记录的 **Next-Key Lock** ，状态是正在RUNNING。
-- 事务2（5124500)：**IX（插入意向锁，TABLE LOCK）**，**排他锁（X）**，状态是阻塞在事务1的 **Next-Key Lock** 上（insert intention waiting）。
-- 事务3（5124532）：**IX（插入意向锁，TABLE LOCK）**，**排他锁（X）**，状态是阻塞在事务1的 **Next-Key Lock** 上（insert intention waiting）。
+- 事务1（5124462）：**IX（意向锁，TABLE LOCK）**，**排他锁（X）**，以及记录的 **Next-Key Lock** ，状态是正在RUNNING。
+- 事务2（5124500)：**IX（意向锁，TABLE LOCK）**，**排他锁（X）**，状态是阻塞在事务1的 **Next-Key Lock** 上（insert intention waiting）。
+- 事务3（5124532）：**IX（意向锁，TABLE LOCK）**，**排他锁（X）**，状态是阻塞在事务1的 **Next-Key Lock** 上（insert intention waiting）。
 - 除此之外我们也能够看到锁队列中事务3阻塞在事务2上，意味着事务2会在事务1解锁后重新获取到**唯一键的排他锁**，也就是执行权限。
 
-那到这里，事务1释放锁（提交或者回滚）事务会发生什么呢，没错，5124500（事务2）会获取到锁，并开始要申请加 **Next-Key Lock** 了，但是此时我们想一想，为什么会造成死锁呢？5124500（事务2）直接去申请不就好了吗？这里不知道细心的各位有没有发现，5124532（事务3）还占有着记录的**某些**排他锁，因此 5124500（事务2）是没有办法申请到 **Next-Key Lock** 的，而 5124532（事务3）又没有获取到排他锁，无法执行，所以造成了死锁。（即使获取到，不排除S锁的情况，事务3申请  **Next-Key Lock** 也不会成功，因为事务2还占有着记录的**某些**排他锁）
+那到这里，事务1释放锁（提交或者回滚）事务会发生什么呢，没错，5124500（事务2）会获取到锁，并开始要申请加 **Next-Key Lock** 了，但是此时我们想一想，为什么会造成死锁呢？5124500（事务2）直接去申请不就好了吗？这里不知道细心的各位有没有发现，5124532（事务3）还占有着记录的排他锁（supremum 上的间隙锁，从日志中能够看出来），因此 5124500（事务2）是没有办法申请到 **Next-Key Lock** 的，而 5124532（事务3）又没有获取到排他锁，无法执行，所以造成了死锁。（即使获取到，不排除S锁的情况，事务3申请  **Next-Key Lock** 也不会成功，因为事务2还占有着记录的排他锁）
 
 那么到底是不是这样呢，当我们提交事务1后，再观察日志，日志中显示：
 
@@ -137,7 +137,7 @@ RECORD LOCKS space id 46423 page no 4 n bits 80 index uidx_group_id_user_id of t
 RECORD LOCKS space id 46423 page no 4 n bits 80 index uidx_group_id_user_id of table `im`.`group_info_snapshot_100` trx id 6882419 lock_mode X locks gap before rec
 ```
 
-看来是符合预期的，我们看到 5124500（事务2）在获取到 **Next-Key Lock** 前，还要获取 `lock_mode X insert intention`这样的锁的迹象，这是什么锁呢？这就是MYSQL源码里边的`LOCK_INSERT_INTENTION`，也就是要去尝试插入意向锁<u>（注意，这个和TABLE LOCK还不一样，TABLE LOCK只是对表级别做标记，真正该事务能不能执行还要申请插入意向锁，这也是间隙锁+意向锁解决幻读的初衷）</u>OK，真相大白，上文说的某些锁，就是这个插入意向锁了。总结下来，死锁的过程如下。
+看来是符合预期的，不过奇怪的是，我们看到 5124500（事务2）在获取到 **Next-Key Lock** 前，还要获取 `lock_mode X insert intention`这样的锁的迹象，这是什么锁呢？这就是MYSQL源码里边的`LOCK_INSERT_INTENTION`，也就是要去尝试插入意向锁<u>（注意，这个和TABLE LOCK还不一样，TABLE LOCK只是对表级别做标记，真正该事务能不能执行还要申请插入意向锁，这也是间隙锁+意向锁解决幻读的初衷）</u>OK，真相大白，造成死锁的原因，就是这个插入意向锁了。总结下来，死锁的过程如下。
 
 - 5124500（事务2）RUNNING。
 - 5124500（事务2）获取到了记录的排他锁，尝试申请插入意向锁（但是很不巧，事务3的锁列表里也有记录的排他锁，注定申请不成功）。
