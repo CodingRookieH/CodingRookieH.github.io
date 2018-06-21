@@ -32,7 +32,7 @@ categories:
 
 ### 二、锁的种类
 根据锁的粒度可以把锁细分为表锁和行锁，行锁根据场景的不同又可以进一步细分，在 MySQL 的源码里，定义了四种类型的行锁，如下：
-``` 
+```c++
 #define LOCK_TABLE  16  /* table lock */
 #define LOCK_REC    32  /* record lock */
 
@@ -50,7 +50,7 @@ categories:
 
 ### 三、锁的类型
 MySQL 将锁分成两类：锁类型（lock_type）和锁模式（lock_mode）。锁类型就是上文中介绍的表锁和行锁两种类型，当然行锁还可以细分成记录锁和间隙锁等更细的类型，锁类型描述的锁的粒度，也可以说是把锁具体加在什么地方；而锁模式描述的是到底加的是什么锁，譬如读锁或写锁。锁模式通常是和锁类型结合使用的，锁模式在 MySQL 的源码中定义如下：
-``` 
+```c++
 /* Basic lock modes */
 enum lock_mode {
     LOCK_IS = 0, /* intention shared */
