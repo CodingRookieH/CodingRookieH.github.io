@@ -190,7 +190,7 @@ SELECT * FROM INFORMATION_SCHEMA.INNODB_LOCKS;
 SELECT * FROM INFORMATION_SCHEMA.INNODB_LOCK_WAITS;
 ```
 
-### 六参考
+### 六、参考
 
  **[http://www.aneasystone.com/archives/2017/12/solving-dead-locks-three.html](http://www.aneasystone.com/archives/2017/12/solving-dead-locks-three.html)**
  **[http://keithlan.github.io/2017/06/21/innodb_locks_algorithms/](http://keithlan.github.io/2017/06/21/innodb_locks_algorithms/)**

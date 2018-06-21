@@ -159,13 +159,11 @@ OK，那么唯一键都没有冲突的时候，都出现了这个问题，冲突
 
 最后，无论大家用哪种方式，都鼓励大家尝试，出现问题分析问题，才能够得到成长。
 
-**参考DOC**
+### 参考DOC
 
-[https://dev.mysql.com/doc/refman/5.7/en/innodb-information-schema-examples.html](https://dev.mysql.com/doc/refman/5.7/en/innodb-information-schema-examples.html)
-
-[https://dev.mysql.com/doc/refman/5.7/en/innodb-lock-waits-table.html](https://dev.mysql.com/doc/refman/5.7/en/innodb-lock-waits-table.html)
-
-[https://bugs.mysql.com/bug.php?id=52020](https://bugs.mysql.com/bug.php?id=52020)
+**[https://dev.mysql.com/doc/refman/5.7/en/innodb-information-schema-examples.html](https://dev.mysql.com/doc/refman/5.7/en/innodb-information-schema-examples.html)**
+**[https://dev.mysql.com/doc/refman/5.7/en/innodb-lock-waits-table.html](https://dev.mysql.com/doc/refman/5.7/en/innodb-lock-waits-table.html)**
+**[https://bugs.mysql.com/bug.php?id=52020](https://bugs.mysql.com/bug.php?id=52020)**
 
 本文为作者原创，转载请注明出处 。**邮箱：568718043@qq.com**
 
