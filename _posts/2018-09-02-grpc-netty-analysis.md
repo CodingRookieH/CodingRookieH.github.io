@@ -108,8 +108,8 @@ gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源�
 第一个handler通过大家追踪代码，应该很容易看出来是一个```NettyServerHandler```，在其构造函数中，我们看到了我们之前谈到的粘包拆包的解决方式：
 
 ```
-        Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
-        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
+Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
 ```
 
 而这两种方式也是原生Netty支持的。
@@ -197,7 +197,7 @@ Reactor 的线程模型有三种:
 Reactor 多线程模型 有如下特点:
 - 有专门一个线程, 即 Acceptor 线程用于监听客户端的TCP连接请求。
 - 客户端连接的 IO 操作都是由一个特定的 NIO 线程池负责. 每个客户端连接都与一个特定的 NIO 线程绑定, 因此在这个客户端连接中的所有 IO 操作都是在同一个线程中完成的。
-- 客户端连接有很多, 但是 NIO 线程数是比较少的, 因此一个 NIO 线程可以同时绑定到多个客户端连接中。
+- 客户端连接有很多, 但是 NIO 线程数是比较少的, 因此一个 NIO 线程可以同时绑定到多个客户端连接中。 
 
 接下来我们再来看一下 Reactor 的主从多线程模型.
 一般情况下, Reactor 的多线程模式已经可以很好的工作了, 但是我们考虑一下如下情况: 如果我们的服务器需要同时处理大量的客户端连接请求或我们需要在客户端连接时, 进行一些权限的检查, 那么单线程的 Acceptor 很有可能就处理不过来, 造成了大量的客户端不能连接到服务器.
