@@ -146,7 +146,7 @@ Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, e
     }
 ```
 
-#### NIO线程与用户线程的切换
+### NIO线程与用户线程的切换
 OK，解读到这里，我们回到前边说的第一个 ***Flag1*** 处，为什么NettyServer在构造的时候，会传递一个线程池进去呢？
 我们可以看看最终响应请求的类：
 ```
