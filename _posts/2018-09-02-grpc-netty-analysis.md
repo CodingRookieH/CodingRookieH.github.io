@@ -7,10 +7,14 @@ categories:
 ---
 
 ## GRPC网络模型
-gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源的远程过程调用(RPC)系统。其内部使用Netty作为网络架构，但是Netty的使用姿势有千千万万种，究竟gRPC是如何与Netty进行融合，并且处理通信请求的，本篇博客会讲解讲解.
+gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源的远程过程调用(RPC)系统。其内部使用Netty作为网络架构，但是Netty的使用姿势有千千万万种，究竟gRPC是如何与Netty进行融合，并且处理通信请求的，本篇博客会讲解讲解。
+
+目录:
+- [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
+- 待续
 
 ### NettyServer的构造
-首先我们看看构造函数：
+gRPC的Server是通过NettyServer构造的，首先我们看看构造函数：
 ```
     NettyServer(SocketAddress address, Class<? extends ServerChannel> channelType, Map<ChannelOption<?>, ?> channelOptions, @Nullable EventLoopGroup bossGroup, @Nullable EventLoopGroup workerGroup, ProtocolNegotiator protocolNegotiator, List<Factory> streamTracerFactories, io.grpc.internal.TransportTracer.Factory transportTracerFactory, int maxStreamsPerConnection, int flowControlWindow, int maxMessageSize, int maxHeaderListSize, long keepAliveTimeInNanos, long keepAliveTimeoutInNanos, long maxConnectionIdleInNanos, long maxConnectionAgeInNanos, long maxConnectionAgeGraceInNanos, boolean permitKeepAliveWithoutCalls, long permitKeepAliveTimeInNanos, Channelz channelz) {
         ...
