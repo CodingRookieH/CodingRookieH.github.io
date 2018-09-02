@@ -51,21 +51,7 @@ gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源�
         this.allocateSharedGroups();
         ServerBootstrap b = new ServerBootstrap();
         b.group(this.bossGroup, this.workerGroup);
-        b.channel(this.channelType);
-        if (NioServerSocketChannel.class.isAssignableFrom(this.channelType)) {
-            b.option(ChannelOption.SO_BACKLOG, 128);   //SO_BACKLOGv参数https://www.jianshu.com/p/e6f2036621f4
-            b.childOption(ChannelOption.SO_KEEPALIVE, true);
-        }
-
-        if (this.channelOptions != null) {
-            Iterator var3 = this.channelOptions.entrySet().iterator();
-
-            while(var3.hasNext()) {
-                Entry<ChannelOption<?>, ?> entry = (Entry)var3.next();
-                ChannelOption<Object> key = (ChannelOption)entry.getKey();
-                b.childOption(key, entry.getValue());
-            }
-        }
+        ...
         //开始初始化channel的处理链
         b.childHandler(new ChannelInitializer<Channel>() {
             public void initChannel(Channel ch) throws Exception {
@@ -77,70 +63,11 @@ gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源�
 
                 //具体逻辑都放在 NettyServerTransport 这一层
                 NettyServerTransport transport = new NettyServerTransport(ch, channelDone, NettyServer.this.protocolNegotiator, NettyServer.this.streamTracerFactories, NettyServer.this.transportTracerFactory.create(), NettyServer.this.maxStreamsPerConnection, NettyServer.this.flowControlWindow, NettyServer.this.maxMessageSize, NettyServer.this.maxHeaderListSize, NettyServer.this.keepAliveTimeInNanos, NettyServer.this.keepAliveTimeoutInNanos, NettyServer.this.maxConnectionIdleInNanos, maxConnectionAgeInNanos, NettyServer.this.maxConnectionAgeGraceInNanos, NettyServer.this.permitKeepAliveWithoutCalls, NettyServer.this.permitKeepAliveTimeInNanos);
-                NettyServer var7 = NettyServer.this;
-                ServerTransportListener transportListener;
-                synchronized(NettyServer.this) {
-                    if (NettyServer.this.channel != null && !NettyServer.this.channel.isOpen()) {
-                        ch.close();
-                        return;
-                    }
-
-                    NettyServer.this.eventLoopReferenceCounter.retain();
-                    transportListener = NettyServer.this.listener.transportCreated(transport);
-                }
-
-                //Transport层进行初始化
-                transport.start(transportListener);
-
-                final class LoopReleaser implements ChannelFutureListener {
-                    boolean done;
-
-                    LoopReleaser() {
-                    }
-
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!this.done) {
-                            this.done = true;
-                            NettyServer.this.eventLoopReferenceCounter.release();
-                        }
-
-                    }
-                }
-                //注册一些销毁时的回调
-                ChannelFutureListener loopReleaser = new LoopReleaser();
-                channelDone.addListener(loopReleaser);
-                ch.closeFuture().addListener(loopReleaser);
+                ...
             }
         });
         ChannelFuture future = b.bind(this.address);
-
-        try {
-            //等待bind结束
-            future.await();
-        } catch (InterruptedException var7) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted waiting for bind");
-        }
-
-        if (!future.isSuccess()) {
-            throw new IOException("Failed to bind", future.cause());
-        } else {
-            this.channel = future.channel();
-            Future channelzFuture = this.channel.eventLoop().submit(new Runnable() {
-                public void run() {
-                    Instrumented<SocketStats> listenSocket = new NettyServer.ListenSocket(NettyServer.this.channel);
-                    NettyServer.this.listenSockets = ImmutableList.of(listenSocket);
-                    NettyServer.this.channelz.addListenSocket(listenSocket);
-                }
-            });
-
-            try {
-                //等待Listen Socket初始化完，加入到grpc的Channelz里边
-                channelzFuture.await();
-            } catch (InterruptedException var6) {
-                throw new RuntimeException("Interrupted while registering listen socket to channelz", var6);
-            }
-        }
+        ...
     }
 ```
 看到这里，大家应该心知肚明了，看来GRPC中最终的处理逻辑，应该都由```NettyServerTransport```完成。那么这个类里边又做了什么呢?
@@ -227,22 +154,7 @@ OK，解读到这里，我们回到前边说的第一个 ***Flag1*** 处，为�
     @Override
     public void streamCreated(
         final ServerStream stream, final String methodName, final Metadata headers) {
-      if (headers.containsKey(MESSAGE_ENCODING_KEY)) {
-        String encoding = headers.get(MESSAGE_ENCODING_KEY);
-        Decompressor decompressor = decompressorRegistry.lookupDecompressor(encoding);
-        if (decompressor == null) {
-          stream.close(
-              Status.UNIMPLEMENTED.withDescription(
-                  String.format("Can't find decompressor for %s", encoding)),
-              new Metadata());
-          return;
-        }
-        stream.setDecompressor(decompressor);
-      }
-
-      final StatsTraceContext statsTraceCtx = Preconditions.checkNotNull(
-          stream.statsTraceContext(), "statsTraceCtx not present from stream");
-
+      ...
       final Context.CancellableContext context = createContext(stream, headers, statsTraceCtx);
       final Executor wrappedExecutor;
       // This is a performance optimization that avoids the synchronization and queuing overhead
@@ -261,47 +173,7 @@ OK，解读到这里，我们回到前边说的第一个 ***Flag1*** 处，为�
       // are delivered, including any errors. Callbacks can still be triggered, but they will be
       // queued.
 
-      final class StreamCreated extends ContextRunnable {
-
-        StreamCreated() {
-          super(context);
-        }
-
-        @Override
-        public void runInContext() {
-          ServerStreamListener listener = NOOP_LISTENER;
-          try {
-            ServerMethodDefinition<?, ?> method = registry.lookupMethod(methodName);
-            if (method == null) {
-              method = fallbackRegistry.lookupMethod(methodName, stream.getAuthority());
-            }
-            if (method == null) {
-              Status status = Status.UNIMPLEMENTED.withDescription(
-                  "Method not found: " + methodName);
-              // TODO(zhangkun83): this error may be recorded by the tracer, and if it's kept in
-              // memory as a map whose key is the method name, this would allow a misbehaving
-              // client to blow up the server in-memory stats storage by sending large number of
-              // distinct unimplemented method
-              // names. (https://github.com/grpc/grpc-java/issues/2285)
-              stream.close(status, new Metadata());
-              context.cancel(null);
-              return;
-            }
-            listener = startCall(stream, methodName, method, headers, context, statsTraceCtx);
-          } catch (RuntimeException e) {
-            stream.close(Status.fromThrowable(e), new Metadata());
-            context.cancel(null);
-            throw e;
-          } catch (Error e) {
-            stream.close(Status.fromThrowable(e), new Metadata());
-            context.cancel(null);
-            throw e;
-          } finally {
-            jumpListener.setListener(listener);
-          }
-        }
-      }
-
+      ...
       wrappedExecutor.execute(new StreamCreated());
     }
 ```
@@ -326,6 +198,7 @@ Reactor 多线程模型 有如下特点:
 - 有专门一个线程, 即 Acceptor 线程用于监听客户端的TCP连接请求。
 - 客户端连接的 IO 操作都是由一个特定的 NIO 线程池负责. 每个客户端连接都与一个特定的 NIO 线程绑定, 因此在这个客户端连接中的所有 IO 操作都是在同一个线程中完成的。
 - 客户端连接有很多, 但是 NIO 线程数是比较少的, 因此一个 NIO 线程可以同时绑定到多个客户端连接中。
+
 接下来我们再来看一下 Reactor 的主从多线程模型.
 一般情况下, Reactor 的多线程模式已经可以很好的工作了, 但是我们考虑一下如下情况: 如果我们的服务器需要同时处理大量的客户端连接请求或我们需要在客户端连接时, 进行一些权限的检查, 那么单线程的 Acceptor 很有可能就处理不过来, 造成了大量的客户端不能连接到服务器.
 Reactor 的主从多线程模型就是在这样的情况下提出来的, 它的特点是: 服务器端接收客户端的连接请求不再是一个线程, 而是由一个独立的线程池组成. 它的线程模型如下:
