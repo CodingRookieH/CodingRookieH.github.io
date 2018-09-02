@@ -9,7 +9,7 @@ categories:
 ## GRPC网络模型
 gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源的远程过程调用(RPC)系统。其内部使用Netty作为网络架构，但是Netty的使用姿势有千千万万种，究竟gRPC是如何与Netty进行融合，并且处理通信请求的，本篇博客会讲解讲解。
 
-**目录**:
+**系列目录**:
 - [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - 待续
 
@@ -48,7 +48,7 @@ gRPC的Server是通过NettyServer构造的，首先我们看看构造函数：
     }
 ```
 是不是有点熟悉，如果使用过NIO线程处理过回调的同学，应该知道，线程名都是```grpc-default-worker-ELG```，并且为0时，还是默认还是可用CPU核数*2。
-***[FLAG1]*** 但是细心的同学会发现，不对啊，在构造NettyServer的时候，我明明是可以指定Executor的，那个线程池是做什么用的呢？这里先立个flag，一会细讲。
+**[FLAG1]** 但是细心的同学会发现，不对啊，在构造NettyServer的时候，我明明是可以指定Executor的，那个线程池是做什么用的呢？这里先立个flag，一会细讲。
 ```
     public void start(ServerListener serverListener) throws IOException {
         this.listener = (ServerListener)Preconditions.checkNotNull(serverListener, "serverListener");
@@ -107,15 +107,12 @@ gRPC的Server是通过NettyServer构造的，首先我们看看构造函数：
         this.channel.pipeline().addLast(new ChannelHandler[]{negotiationHandler});
     }
 ```
-
 看来比想象的复杂，有两个handler，那么为什么要分两个呢，先看第一个handler：
 第一个handler通过大家追踪代码，应该很容易看出来是一个```NettyServerHandler```，在其构造函数中，我们看到了我们之前谈到的粘包拆包的解决方式：
-
 ```
 Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(connection, frameWriter);
 Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
 ```
-
 而这两种方式也是原生Netty支持的。
 那如果简单的只是Netty原生的encoder和decoder，难道HTTP2已经用了Google的ProtoBuffer了？
 显然不是，在```NettyServerHandler```构造的时候，我们可以看到有一行很隐蔽的代码：
@@ -151,7 +148,7 @@ Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, e
 ```
 
 ### NIO线程与用户线程的切换
-OK，解读到这里，我们回到前边说的第一个 ***Flag1*** 处，为什么NettyServer在构造的时候，会传递一个线程池进去呢？
+OK，解读到这里，我们回到前边说的第一个 **[Flag1]** 处，为什么NettyServer在构造的时候，会传递一个线程池进去呢？
 我们可以看看最终响应请求的类：
 ```
 ################################# ServerImpl ##########################################
