@@ -1,35 +1,38 @@
-## Channel、Connection、Stream的那些事（基于Netty）
+---
+layout: post
+title: GRPC网络模型
+comments: true
+categories:
+  - GRPC从入门到放弃
+---
 
+## Channel、Connection、Stream的那些事（基于Netty）
 看过了第一篇gRPC的网络模型，相信大家已经对gRPC的网络模型有了一定的了解，今天博主会结合大名鼎鼎的`Netty`，详细掰掰扯和数据交互密不可分的这些类，他们的区别和联系。
 
+**系列目录**:
+- [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
+- [Channel、Connection、Stream的那些事（基于Netty]
+- 待续
+
 ## Channel
-
 `Channel`是JAVA针对NIO提出的一种类似于InputStream、OutputStream的概念。
-
 ```
    A channel represents an open connection to an entity such as a hardware
  * device, a file, a network socket, or a program component that is capable of
  * performing one or more distinct I/O operations, for example reading or
  * writing.
 ```
-
 `Channel `类型有:
-
 - FileChannel, 文件操作
 - DatagramChannel, UDP 操作
 - SocketChannel, TCP 操作
 - ServerSocketChannel, TCP 操作, 使用在服务器端
-
 这些通道涵盖了 UDP 和 TCP网络 IO以及文件 IO。
 
 ## Http2Connection
-
 这里的Connection和连接池的连接是有区别的，Http2的连接默认使用的是`DefaultHttp2Connection`，这个类主要是对两个`EndPoint`进行连接管理（注意，这里的`EndPoint`可以视为两台通讯设备），本文中的另一主角`Http2Stream`就是被管理在这个类中的。
-
 那么这个类在做些什么事情呢?
-
-首先我们看看类里有什么
-
+首先我们看看类里有什么:
 ```
 	final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
     final ConnectionStream connectionStream = new ConnectionStream();
@@ -40,11 +43,8 @@
     final ActiveStreams activeStreams;
     Promise<Void> closePromise;
 ```
-
 比较重要的应该就是上述的这些数据，其中`ConnectionStream`其实是初始化`Http2Connection`时为了区别其他`Stream`，添加的一个自身标识。
-
 初次之外，我们看到，`Connection`管理`Stream`的应该就是**connectionStream**这个Map了。
-
 那为什么还需要**activeStreams**呢，这是个很好的问题，博主追了下代码，从`DefaultEndpoint`中找到了答案，原来在`EndPoint`创建`Stream`的时候：
 
 ```
@@ -83,17 +83,13 @@
 ```
 
 ## Http2Stream
-
 终于，我们要到Stream了。
-
 在一个HTTP/2的连接中, 流是服务器与客户端之间用于帧交换的一个独立双向序列. 流有几个重要的特点:
-
 - 一个HTTP/2连接可以包含多个并发的流, 各个端点从多个流中交换frame
 - 流可以被客户端或服务器单方面建立, 使用或共享
 - 流也可以被任意一方关闭
 - frames在一个流上的发送顺序很重要. 接收方将按照他们的接收顺序处理这些frame. 特别是`HEADERS`和`DATA` frame的顺序, 在协议的语义上显得尤为重要.
-- 流用一个整数(流标识符)标记. 端点初始化流的时候就为其分配了标识符.
-
+- 流用一个整数(流标识符)标记. 端点初始化流的时候就为其分配了标识符. 
 拷贝RFC中HTT2中关于流的状态图如下：
 
 ```
@@ -175,7 +171,7 @@
 
   端点可以发送一个`PRIORITY` frame以重新确定reserved流的优先级次序. 不允许发送除`RST_STREAM`, `WINDOW_UPDATE`或`PRIORITY`之外的frame.
 
-  在一个流上拿到非`HEADERS`	,` RST_STREAM`或`PRIORITY`的frame必须视为`PROTOCOL_EROR`类型的连接错误。
+  在一个流上拿到非`HEADERS`	,`RST_STREAM`或`PRIORITY`的frame必须视为`PROTOCOL_EROR`类型的连接错误。
 
 - `open` 任何一对等方可以使用`open`状态的流发送任意类型的frame. 这一状态下, 发送方会监视给出的流级别和流控范围.
 
@@ -183,9 +179,9 @@
 
   在这个状态发送`RST_STREAM` frame可以使状态立即变成`closed`。
 
-- `half-closed (local)` 处于这个状态的流不能发送除`WINDOW_UPDATE`，` PRIORITY`以及`RST_STREAM`之外的frame。
+- `half-closed (local)` 处于这个状态的流不能发送除`WINDOW_UPDATE`，`PRIORITY`以及`RST_STREAM`之外的frame。
 
-  收到一个标记了`END_STREAM`的frame或者发送一个RST_STREAM` frame， 都会使状态变成closed。
+  收到一个标记了`END_STREAM`的frame或者发送一个`RST_STREAM` frame， 都会使状态变成closed。
 
   端点允许接收任意类型的frame。 便于后续接收用于流控的frame， 使用`WINDOW_UPDATE` frame提供流控credit很有必要. 接收方可以选择忽略`WINDWO_UPDATE` frame, (which might arrive for a short period after a frame bearing the END_STREAM flag is sent.)
 
@@ -218,7 +214,5 @@
 本文档中没有给出更具体说明的地方, 对于收到的那些未在上述状态描述中明确认可的帧, 协议实现上应该视这种情况为一个类型为`PROTOCOL_ERROR`的连接错误，另外注意`PRIORITY`帧可以在流的任何一个状态被发送/接收。 忽略未知类型的帧。
 
 ## 三者的关系
-
 其实通过上述介绍，读者们应该将他们的关系猜的八九不离十了，简单的讲就是：
-
 `Http2Connection`管理`Http2Stream`，而`Http2Stream`只是一个`Stream`的状态管理，真正的数据传输还是要通过`Channel`，那`Channel`和`Http2Stream`的连接点在哪里呢？对于`Netty`来说，连接点就是`HttpConnectionHandler`，因此，对于一个`Channel`，就对应一个`Http2Connection`，一个`Http2Connection`对应多个`Http2Stream`。
