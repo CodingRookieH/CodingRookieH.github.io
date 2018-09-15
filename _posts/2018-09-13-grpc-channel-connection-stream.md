@@ -38,10 +38,10 @@ categories:
         final ConnectionStream connectionStream = new ConnectionStream();
         final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
         final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
-...
-final List<Listener> listeners = new ArrayList<Listener>(4);
-final ActiveStreams activeStreams;
-Promise<Void> closePromise;
+        ...
+        final List<Listener> listeners = new ArrayList<Listener>(4);
+        final ActiveStreams activeStreams;
+        Promise<Void> closePromise;
 ```
 比较重要的应该就是上述的这些数据，其中`ConnectionStream`其实是初始化`Http2Connection`时为了区别其他`Stream`，添加的一个自身标识。
 初次之外，我们看到，`Connection`管理`Stream`的应该就是**connectionStream**这个Map了。
@@ -159,7 +159,7 @@ Promise<Void> closePromise;
 - `half-closed (local)` 处于这个状态的流不能发送除`WINDOW_UPDATE`，`PRIORITY`以及`RST_STREAM`之外的frame。
   收到一个标记了`END_STREAM`的frame或者发送一个`RST_STREAM` frame， 都会使状态变成closed。
   端点允许接收任意类型的frame。 便于后续接收用于流控的frame， 使用`WINDOW_UPDATE` frame提供流控credit很有必要. 接收方可以选择忽略`WINDWO_UPDATE` frame, (which might arrive for a short period after a frame bearing the END_STREAM flag is sent.)
-  收到的PRIORITY frame用于重定流的优先级次序(依据流的标记而定)。
+  收到的`PRIORITY` frame用于重定流的优先级次序(依据流的标记而定)。
 
 - `half-closed (remote)` 处于这个状态的流，对端不再用来发送frame了。 并且端点也无需继续维护接收方流控窗口。
   如果端点收到额外的frame,并且不是`WINDOW_UPDATE`，`PRIORITY`或`RST_STREAM`，那么必须响应一个类型为`STREAM_CLOSED`的流错误。
@@ -167,7 +167,7 @@ Promise<Void> closePromise;
   发送一个`END_STERAM`标记的frame或任意一个对等方发送了`RST_STREAM` frame都会使流变为`closed`。
 
 - `closed` closed标识终止状态。
-  在一个closed的流上不允许发送`PRIORITY`之外的其他frame. 端点在收到`RST_STREAM` frame后又收到非PRIORITY的frame的话， 一定被视为流错误对待(类型`STREAM_CLOSED`)。
+  在一个closed的流上不允许发送`PRIORITY`之外的其他frame. 端点在收到`RST_STREAM` frame后又收到非`PRIORITY`的frame的话， 一定被视为流错误对待(类型`STREAM_CLOSED`)。
   同样, 收到`END_STREAM`标记后又收到**非如下描述**的frame， 会触发一个连接错误(类型`STREAM_CLOSED`)：
   发送了包含`END_STREAM`标记的`DATA`或`HEADERS` frame后的一小段时间内，允许`WINDOW_UPDATE`或`RST_STREAM` frame被接收。 直到远程对等端收到并处理了`RST_STERAM`或包含`END_STREAM`标记的frame, 才可以发送这些类型的frame。 假如在发送了`END_STREAM`后已明显过了超时时间, 这时却再次收到frame， 尽管终端可以选择把这个frame当成`PROTOCOL_ERROR`类型的连接错误来处理, 但无论如何最终**必须**忽略这种情况下收到的`WINDOW_UPDATE`或`RST_STREAM` frame。
   `PRIORITY`帧可从`closed`流上发到优先级更高的流(取决于`closed`流)。终端应该处理`PRIORITY`帧, 尽管他们可能因为流已经从依赖树中移除而被忽略。
