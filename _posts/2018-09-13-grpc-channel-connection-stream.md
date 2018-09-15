@@ -8,7 +8,8 @@ categories:
 
 ## Channel、Connection、Stream的那些事（基于Netty）
 看过了第一篇gRPC的网络模型，相信大家已经对gRPC的网络模型有了一定的了解，今天博主会结合大名鼎鼎的`Netty`，详细掰掰扯和数据交互密不可分的这些类，他们的区别和联系。
-**系列目录**:
+
+**系列目录**：
 - [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
 - 待续
@@ -33,10 +34,10 @@ categories:
 那么这个类在做些什么事情呢?
 首先我们看看类里有什么:
 ```
-final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
-final ConnectionStream connectionStream = new ConnectionStream();
-final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
-final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
+        final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
+        final ConnectionStream connectionStream = new ConnectionStream();
+        final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
+        final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
 ...
 final List<Listener> listeners = new ArrayList<Listener>(4);
 final ActiveStreams activeStreams;
@@ -56,9 +57,9 @@ Promise<Void> closePromise;
             DefaultStream stream = new DefaultStream(streamId, state);
 
             incrementExpectedStreamId(streamId);
-			      //放在streamMap中去
+            //放在streamMap中去
             addStream(stream);
-			      //放入activeStreams中去
+            //放入activeStreams中去
             stream.activate();
             return stream;
         }
