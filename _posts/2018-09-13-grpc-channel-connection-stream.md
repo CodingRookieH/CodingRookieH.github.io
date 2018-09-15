@@ -33,14 +33,14 @@ categories:
 那么这个类在做些什么事情呢?
 首先我们看看类里有什么:
 ```
-	final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
-    final ConnectionStream connectionStream = new ConnectionStream();
-    final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
-    final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
-	...
-    final List<Listener> listeners = new ArrayList<Listener>(4);
-    final ActiveStreams activeStreams;
-    Promise<Void> closePromise;
+final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
+final ConnectionStream connectionStream = new ConnectionStream();
+final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
+final DefaultEndpoint<Http2RemoteFlowController> remoteEndpoint;
+...
+final List<Listener> listeners = new ArrayList<Listener>(4);
+final ActiveStreams activeStreams;
+Promise<Void> closePromise;
 ```
 比较重要的应该就是上述的这些数据，其中`ConnectionStream`其实是初始化`Http2Connection`时为了区别其他`Stream`，添加的一个自身标识。
 初次之外，我们看到，`Connection`管理`Stream`的应该就是**connectionStream**这个Map了。
@@ -56,9 +56,9 @@ categories:
             DefaultStream stream = new DefaultStream(streamId, state);
 
             incrementExpectedStreamId(streamId);
-			//放在streamMap中去
+			      //放在streamMap中去
             addStream(stream);
-			//放入activeStreams中去
+			      //放入activeStreams中去
             stream.activate();
             return stream;
         }
