@@ -3,7 +3,7 @@ layout: post
 title: gRPC中的Frame
 comments: true
 categories:
-  - gRPC中的Frame
+  - GRPC从入门到放弃
 ---
 
 ## gRPC中的Frame
