@@ -14,7 +14,7 @@ categories:
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
 - 待续
 
-## Channel
+### Channel
 `Channel`是JAVA针对NIO提出的一种类似于InputStream、OutputStream的概念。
 ```
    A channel represents an open connection to an entity such as a hardware
@@ -29,7 +29,7 @@ categories:
 - ServerSocketChannel, TCP 操作, 使用在服务器端
 这些通道涵盖了 UDP 和 TCP网络 IO以及文件 IO。
 
-## Http2Connection
+### Http2Connection
 这里的Connection和连接池的连接是有区别的，Http2的连接默认使用的是`DefaultHttp2Connection`，这个类主要是对两个`EndPoint`进行连接管理（注意，这里的`EndPoint`可以视为两台通讯设备），本文中的另一主角`Http2Stream`就是被管理在这个类中的。
 那么这个类在做些什么事情呢?
 首先我们看看类里有什么:
@@ -79,7 +79,7 @@ categories:
         }
 ```
 
-## Http2Stream
+### Http2Stream
 终于，我们要到Stream了。
 在一个HTTP/2的连接中, 流是服务器与客户端之间用于帧交换的一个独立双向序列. 流有几个重要的特点:
 - 一个HTTP/2连接可以包含多个并发的流, 各个端点从多个流中交换frame
@@ -177,6 +177,6 @@ categories:
 
 本文档中没有给出更具体说明的地方, 对于收到的那些未在上述状态描述中明确认可的帧, 协议实现上应该视这种情况为一个类型为`PROTOCOL_ERROR`的连接错误，另外注意`PRIORITY`帧可以在流的任何一个状态被发送/接收。 忽略未知类型的帧。
 
-## 三者的关系
+### 三者的关系
 其实通过上述介绍，读者们应该将他们的关系猜的八九不离十了，简单的讲就是：
 `Http2Connection`管理`Http2Stream`，而`Http2Stream`只是一个`Stream`的状态管理，真正的数据传输还是要通过`Channel`，那`Channel`和`Http2Stream`的连接点在哪里呢？对于`Netty`来说，连接点就是`HttpConnectionHandler`，因此，对于一个`Channel`，就对应一个`Http2Connection`，一个`Http2Connection`对应多个`Http2Stream`。

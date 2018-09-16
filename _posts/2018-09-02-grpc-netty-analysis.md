@@ -1,16 +1,16 @@
 ---
 layout: post
-title: GRPC网络模型
+title: gRPC网络模型
 comments: true
 categories:
   - GRPC从入门到放弃
 ---
 
-## GRPC网络模型
+## gRPC网络模型
 gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源的远程过程调用(RPC)系统。其内部使用Netty作为网络架构，但是Netty的使用姿势有千千万万种，究竟gRPC是如何与Netty进行融合，并且处理通信请求的，本篇博客会讲解讲解。
 
 **系列目录**：
-- [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
+- [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
 - 待续
 
