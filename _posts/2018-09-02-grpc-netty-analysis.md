@@ -12,6 +12,7 @@ gRPC 一开始由 google 开发，是一款语言中立、平台中立、开源�
 **系列目录**：
 - [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
+- [gRPC中的Frame](https://codingrookieh.github.io/grpc%E4%B8%AD%E7%9A%84frame/2018/09/15/grpc-write-queue/)
 - 待续
 
 ### NettyServer的构造

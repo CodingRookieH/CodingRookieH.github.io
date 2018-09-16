@@ -10,8 +10,9 @@ categories:
 看过了第一篇gRPC的网络模型，相信大家已经对gRPC的网络模型有了一定的了解，今天博主会结合大名鼎鼎的`Netty`，详细掰掰扯和数据交互密不可分的这些类，他们的区别和联系。
 
 **系列目录**：
-- [GRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
+- [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
+- [gRPC中的Frame](https://codingrookieh.github.io/grpc%E4%B8%AD%E7%9A%84frame/2018/09/15/grpc-write-queue/)
 - 待续
 
 ### Channel

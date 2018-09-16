@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Channel、Connection、Stream的那些事（基于Netty）
+title: gRPC中的Frame
 comments: true
 categories:
   - gRPC中的Frame
@@ -12,7 +12,7 @@ categories:
 **系列目录**：
 - [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
-- [gRPC中的Frame]
+- [gRPC中的Frame](https://codingrookieh.github.io/grpc%E4%B8%AD%E7%9A%84frame/2018/09/15/grpc-write-queue/)
 - 待续
 
 ### HTTP2中的Frame格式
@@ -37,7 +37,7 @@ categories:
 - `Stream Identifier`：31位无符号整型的流标示符。其中0x0作为保留值， 表示与连接相关的frames作为一个整体而不是一个单独的流。
 具体的`Frame`定义格式大家可以参考**[RFC7540](https://httpwg.org/specs/rfc7540.html#FrameTypes)**
 
-### 数据写入中转站--WriteQueue
+### 数据写入中转站:WriteQueue
 为什么需要从WriteQueue开始讲起，因为所有的gRPC的数据都是通过他写入`Channel`的，`Channel`不太了解的同学还是看一下`Netty`的源码。
 既然叫做`Queue`，储存了什么呢？
 ```
@@ -62,11 +62,8 @@ categories:
   }
 ```
 那什么时候会调用呢？ 
-我们来看`WriteQueue`的`scheduleFlush()`方法： 
+我们来看`WriteQueue`的`scheduleFlush()`方法：
 ```
-  /**
-   * Schedule a flush on the channel.
-   */
   void scheduleFlush() {
     if (scheduled.compareAndSet(false, true)) {
       // Add the queue to the tail of the event loop so writes will be executed immediately
@@ -75,7 +72,6 @@ categories:
       channel.eventLoop().execute(later);
     }
   }
-
 ```
 看来是串行的在往`eventLoop()`中提交刷新，为什么说是串行的，因为大家会根据源码看看`later`，其中最终会调用到`WriteQueue`的`flush()`方法，所以，流程就变成。 
 1. `WriteQueue`中的`enqueue()`方法加入队列，并决定是否要往`Channel中写`。
