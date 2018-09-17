@@ -9,6 +9,13 @@ categories:
 ## 转换的艺术：MessageFrame、MessageDeframer
 前边我们讲了gRPC通信的模型，以及`WriteQueue`还有Frame。哎？那我们最终看到的请求或者响应，都是已经序列化好的类啊？难道`Netty`还能帮我转换成字节不成？如果一次通信的Frame过大，要分两个Frame发，怎么整？本篇会来介绍处理这些问题的类，`MessageFrame`和`MessageDeframer`。
 
+**系列目录**：
+- [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
+- [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
+- [gRPC中的FRAME](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/15/grpc-write-queue/)
+- [转换的艺术：MessageFrame、MessageDeframer](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/17/grpc-message-framer/)
+- 待续
+
 ### MessageFrame
 ```java
 Encodes gRPC messages to be delivered via the transport layer 
@@ -79,7 +86,7 @@ Encodes gRPC messages to be delivered via the transport layer
 1. `ClientCallImpl`调用`startCall()`发送建立`Stream`的`Header`。
 2. `ClientCallImpl`中`sendMessage()`开始发送数据（ps，已经发送过`Header`了）
 3. 当发送完成后，`ClientCallImpl`会`half-close`，此时会真正提交最后一个`buffer`(`end-of-stream`)到`WriteQueue`，并且发送出去(`flush=true`)。
-4. 等待服务端响应。
+4. 等待服务端响应。  
 OK，清晰明了，这里各位估计有个疑问，我们在发送`Data Frame`的时候，有一个5个字节的`writeableHeader`，WTF，这个是啥？原来这个这个`Header`还会标识这个`Frame`有没有压缩，`Frame`里边有多少个字节，看样子也是能放下一个`int`类型的了。用做什么呢？下边继续看。
 
 ### MessageDeframer
