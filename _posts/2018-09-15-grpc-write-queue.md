@@ -165,3 +165,5 @@ RFC中的`Stream`说的是`Http2Stream`，大致的意思是，`Stream`中的`Fr
 
 ### 总结
 看来gRPC基于`Http2`，每次完整的请求周期，只对应一个`Stream`，在`Stream`上，Client和Server创建`Stream`，发送数据，处理，返回，关闭流。这么看来，使用完全异步的`Netty`也是明智之举，毕竟有StreamId，请求的处理顺序控制的很好。
+
+本文为作者原创，转载请注明出处 。**邮箱：568718043@qq.com**

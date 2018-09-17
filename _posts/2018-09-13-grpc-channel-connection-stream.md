@@ -181,3 +181,5 @@ categories:
 ### 三者的关系
 其实通过上述介绍，读者们应该将他们的关系猜的八九不离十了，简单的讲就是：
 `Http2Connection`管理`Http2Stream`，而`Http2Stream`只是一个`Stream`的状态管理，真正的数据传输还是要通过`Channel`，那`Channel`和`Http2Stream`的连接点在哪里呢？对于`Netty`来说，连接点就是`HttpConnectionHandler`，因此，对于一个`Channel`，就对应一个`Http2Connection`，一个`Http2Connection`对应多个`Http2Stream`。
+
+本文为作者原创，转载请注明出处 。**邮箱：568718043@qq.com**
