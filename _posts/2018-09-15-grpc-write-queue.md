@@ -1,18 +1,18 @@
 ---
 layout: post
-title: gRPC中的Frame
+title: gRPC中的FRAME
 comments: true
 categories:
   - GRPC从入门到放弃
 ---
 
-## gRPC中的Frame
+## gRPC中的FRAME
 经过前边两章，大家应该了解了gRPC中的网络相关的知识，但是真的要通讯起来，网络包、通讯流程、数据结构又是如何的呢？直接使用HTTP2进行通讯不就完事了？远没有那么简单，本文会从gRPC中的`WriteQueue`出发，介绍一下gRPC中请求的封装结构，以及Frame的概念。下文所有的Frame，也叫帧，各位看官注意一下。
 
 **系列目录**：
 - [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
 - [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
-- [gRPC中的Frame](https://codingrookieh.github.io/grpc%E4%B8%AD%E7%9A%84frame/2018/09/15/grpc-write-queue/)
+- [gRPC中的FFAME](https://codingrookieh.github.io/grpc%E4%B8%AD%E7%9A%84frame/2018/09/15/grpc-write-queue/)
 - 待续
 
 ### HTTP2中的Frame格式
