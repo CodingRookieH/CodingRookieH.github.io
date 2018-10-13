@@ -1,17 +1,17 @@
 ---
 layout: post
-title: Channel、Connection、Stream的那些事（基于Netty）
+title: Channel、Connection、Http2Stream、Steam的那些事（基于Netty）
 comments: true
 categories:
   - GRPC从入门到放弃
 ---
 
-## Channel、Connection、Stream的那些事（基于Netty）
+## Channel、Connection、Http2Stream、Stream的那些事（基于Netty）
 看过了第一篇gRPC的网络模型，相信大家已经对gRPC的网络模型有了一定的了解，今天博主会结合大名鼎鼎的`Netty`，详细掰掰扯和数据交互密不可分的这些类，他们的区别和联系。
 
 **系列目录**：
 - [gRPC网络模型](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/02/grpc-netty-analysis/)
-- [Channel、Connection、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
+- [Channel、Connection、Htt2Stream、Stream的那些事（基于Netty)](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/13/grpc-channel-connection-stream/)
 - [gRPC中的FRAME](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/15/grpc-write-queue/)
 - [转换的艺术：MessageFrame、MessageDeframer](https://codingrookieh.github.io/grpc%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/2018/09/17/grpc-message-framer/)
 - 待续
@@ -179,8 +179,29 @@ categories:
 
 本文档中没有给出更具体说明的地方, 对于收到的那些未在上述状态描述中明确认可的帧, 协议实现上应该视这种情况为一个类型为`PROTOCOL_ERROR`的连接错误，另外注意`PRIORITY`帧可以在流的任何一个状态被发送/接收。 忽略未知类型的帧。
 
-### 三者的关系
+### Stream In gRPC
+`Stream`，按照官方的说法，是：
+```
+A single stream of communication between two end-points within a transport.
+```
+什么个意思呢，就是两个`end-points`之间一次完整的通信中的一个最小单元（可能含多个），叫做`Stream`，其中可能会包含很多`Frame`，其中被gRPC用的最多的就是`NettyClientStream`（Client端维护的）和`NettyServerStream`（Server端维护的）。首先我们分析下这两个类的父类`ServerStream`和`ClientStream`的接口约定。
+`Stream的`接口定义：
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-09-13-grpc-channel-connection-stream/Stream.png)
+`ServerStream`的代码：
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-09-13-grpc-channel-connection-stream/ServerStream.png)
+`CleitStream`的代码：
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-09-13-grpc-channel-connection-stream/ClientStream.png)
+看来，双方`Stream`都是可以写数据`writeMessage()`和请求数据`request()`的，并且根据参数，我们也能够清楚的判断，这个Stream就是和`Protobuf`(gRPC中的序列化组件)到`Netty`组件的连接点。
+同时，我们也能够看到，只有`ClientStream`有`start()`，这就意味着一个请求的生命周期是从Client端开始的，并且`ClientStream`只有`halfClose()`，看来，关闭`Stream`的事是交给了`ServerStream`（异常关闭使用的是`cancel`这个注意一下）。
+那么`Stream`和`Http2Stream`是什么关系呢？
+答，是一对一维护一个映射的关系，一个`Stream`只有一个`TransportState`，而`TransportState`中含有一个`id`，这个`id`是谁呢？大家看看下边这个`NettyClientHandler`中`createStream()`方法。
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-09-13-grpc-channel-connection-stream/NettyClientHandler.png)
+原来这个`id`就是`Http2Stream`的`id`。
+看来Google，为了更加方便的使用`Http2Stream`，就对其封装了一层。
+顺便说句，`Netty`中的`StreamID`是int型的，最大为2147483647，当耗尽时还是抛出`Stream IDs have been exhausted`，这时还是需要去捕获异常进行`Fail Over`的（分布式环境不需要担心，因为还有其他机器可以处理，单点机器要做好防护）。
+
+### 四者的关系
 其实通过上述介绍，读者们应该将他们的关系猜的八九不离十了，简单的讲就是：
-`Http2Connection`管理`Http2Stream`，而`Http2Stream`只是一个`Stream`的状态管理，真正的数据传输还是要通过`Channel`，那`Channel`和`Http2Stream`的连接点在哪里呢？对于`Netty`来说，连接点就是`HttpConnectionHandler`，因此，对于一个`Channel`，就对应一个`Http2Connection`，一个`Http2Connection`对应多个`Http2Stream`。
+`Http2Connection`管理`Http2Stream`，而`Http2Stream`只是一个状态管理，真正的数据传输还是要通过`Channel`，那`Channel`和`Http2Stream`的连接点在哪里呢？对于`Netty`来说，连接点就是`HttpConnectionHandler`，因此，对于一个`Channel`，就对应一个`Http2Connection`，一个`Http2Connection`对应多个`Http2Stream`，而gRPC中`Stream`就是对`Http2Stream`的一次封装，他们之间的关联就是用`StreamID`关联起来的。
 
 本文为作者原创，转载请注明出处 。**邮箱：568718043@qq.com**
