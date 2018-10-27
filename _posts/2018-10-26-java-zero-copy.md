@@ -100,7 +100,7 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 到这里大家对 `transferTo()` 实现 `Zero-copy` 的原理应该很清楚了吧。
 
 ### 总结
-其实普通RPC中间件会使用第一种零拷贝多一些，因为大多数JAVA中间件基于`Netty`，而`Netty`又基于NIO，使用堆外内存的方式减少拷贝次数也无可厚非。
-对于Kafka这种基于文件系统的中间件（Kafka的消息最终会落到磁盘文件中），使用的是第三种零拷贝多一些，毕竟是基于文件数据的传输。
+1. 其实普通RPC中间件会使用第一种零拷贝多一些，因为大多数JAVA中间件基于`Netty`，而`Netty`又基于NIO，使用堆外内存的方式减少拷贝次数也无可厚非。
+2. 对于Kafka这种基于文件系统的中间件（Kafka的消息最终会落到磁盘文件中），使用的是第三种零拷贝多一些，毕竟是基于文件数据的传输。
 
 参考 **[Efficient data transfer through zero copy](https://www.ibm.com/developerworks/library/j-zerocopy/)**
