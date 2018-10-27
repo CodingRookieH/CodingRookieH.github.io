@@ -71,7 +71,8 @@ Socket.send(socket, buf, len);
 2. 被请求长度的数据从内核的读缓冲区拷贝到用户缓冲区，并且 `read()` 调用返回。这个返回导致又一次从内核态到用户态的上下文切换。现在数据是存储在用户地址空间缓冲区。
 3. `send()` 调用引起了一次从用户态到内核态的上下文切换。第三次拷贝又一次将数据放进内核地址空间缓冲区，尽管这一次是放进另一个不同的缓冲区，和目标socket联系在一起。
 4. `send()` 系统调用返回，产生了第四次上下文切换。第四次拷贝由 `DMA` 引擎独立异步地将数据从内核缓冲区传递给协议引擎。
-看到这里可能有些读者会问，`read()` 函数为什么不直接将数据拷贝到用户地址空间的缓冲区，而要经内核地址空间的缓冲区转一次手，这不是白白多了一次拷贝操作吗？
+
+看到这里可能有些读者会问，`read()` 函数为什么不直接将数据拷贝到用户地址空间的缓冲区，而要经内核地址空间的缓冲区转一次手，这不是白白多了一次拷贝操作吗？ 
 对IO函数有了解的童鞋肯定知道，在IO函数的背后有一个缓冲区 `buffer` ，我们平常的读和写操作并不是直接和底层硬件设备打交道，而是通过一块叫缓冲区的内存区域缓存数据来间接读写。我们知道，和CPU、高速缓存、内存比，磁盘、网卡这些设备属于慢速设备，交换一次数据要花很多时间，同时会消耗总线传输带宽，所以我们要尽量降低和这些设备打交道的频率，而使用缓冲区中转数据就是为了这个目的。
 引用参考文献中的话：
 > Using the intermediate buffer on the read side allows the kernel buffer to act as a "readahead cache" when the application hasn't asked for as much data as the kernel buffer holds. This significantly improves performance when the requested data amount is less than the kernel buffer size. The intermediate buffer on the write side allows the write to complete asynchronously.
@@ -95,6 +96,7 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/6.gif)
 1. `transferTo()` 方法引起 `DMA` 引擎将文件内容拷贝到内核缓冲区。
 2. 没有数据从内核缓冲区拷贝到socket缓冲区，只有携带位置和长度信息的描述符被追加到socket缓冲区上， `DMA` 引擎直接将内核缓冲区的数据传递到协议引擎，全程无需CPU拷贝数据。
+
 到这里大家对 `transferTo()` 实现 `Zero-copy` 的原理应该很清楚了吧。
 
 ### 总结
