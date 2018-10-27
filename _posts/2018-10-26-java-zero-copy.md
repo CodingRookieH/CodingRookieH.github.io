@@ -9,6 +9,7 @@ categories:
 ## 一次零拷贝引发的悬案
 根据 Wiki 对 Zero-copy 的定义:
 > "Zero-copy" describes computer operations in which the CPU does not perform the task of copying data from one memory area to another. This is frequently used to save CPU cycles and memory bandwidth when transmitting a file over a network.
+
 即所谓的 `Zero-copy`, 就是在操作数据时，不需要将数据 buffer 从一个内存区域拷贝到另一个内存区域。因为少了一次内存的拷贝，因此 CPU 的效率就得到的提升。
 在 OS 层面上的 `Zero-copy` 通常指避免在 `用户态(User-space)` 与 `内核态(Kernel-space)` 之间来回拷贝数据。例如 Linux 提供的 `mmap` 系统调用，它可以将一段用户空间内存映射到内核空间, 当映射成功后，用户对这段内存区域的修改可以直接反映到内核空间；同样地，内核空间对这段区域的修改也直接反映用户空间。正因为有这样的映射关系, 我们就不需要在 `用户态(User-space)` 与 `内核态(Kernel-space)` 之间拷贝数据，提高了数据传输的效率。
 
