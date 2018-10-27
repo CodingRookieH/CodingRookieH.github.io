@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 转换的艺术：MessageFrame、MessageDeframer
+title: 一次零拷贝引发的悬案
 comments: true
 categories:
   - JAVA学习
@@ -63,6 +63,7 @@ Socket.send(socket, buf, len);
 ```
 尽管上面的代码看起来很简单，但在内部实际包含了4次用户态-内核态上下文切换，和4次数据拷贝。
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/3.gif)
+
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/2.gif)
 其中步骤有：
 1. `read()` 调用导致了一次用户态到内核态的上下文切换，在内部，一个 `sys_read()` （或等价函数）被执行来从文件中读取数据。第一次拷贝是由 `DMA` 引擎将数据从磁盘文件存储到内核地址空间缓冲区。
@@ -73,6 +74,7 @@ Socket.send(socket, buf, len);
 对IO函数有了解的童鞋肯定知道，在IO函数的背后有一个缓冲区 `buffer` ，我们平常的读和写操作并不是直接和底层硬件设备打交道，而是通过一块叫缓冲区的内存区域缓存数据来间接读写。我们知道，和CPU、高速缓存、内存比，磁盘、网卡这些设备属于慢速设备，交换一次数据要花很多时间，同时会消耗总线传输带宽，所以我们要尽量降低和这些设备打交道的频率，而使用缓冲区中转数据就是为了这个目的。
 引用参考文献中的话：
 > Using the intermediate buffer on the read side allows the kernel buffer to act as a "readahead cache" when the application hasn't asked for as much data as the kernel buffer holds. This significantly improves performance when the requested data amount is less than the kernel buffer size. The intermediate buffer on the write side allows the write to complete asynchronously.
+
 大意是说，在读一侧的中间缓冲区可以作为预读缓存显著提高当请求数据大小小于内核缓冲区大小时的读性能，在写一侧的中间缓冲区可以允许写操作异步完成。
 不过，当读请求数据的大小大于内核缓冲区时这个策略本身会变成一个性能瓶颈，数据在到达应用程序前会在磁盘、内核缓冲区、用户缓冲区之间反复多次拷贝。
 让我们重新思考下上面的过程，会发现第二次和第三次的拷贝其实是不必要的，我们为什么不直接从读缓冲区将数据传输到socket缓冲区呢？实际上这就是 `transferTo()` 所做的。
@@ -84,8 +86,9 @@ public void transferTo(long position, long count, WritableByteChannel target);
 #include <sys/socket.h>
 ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
 ```
-![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/5.gif)
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/4.gif)
+
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/5.gif)
 可以看到我们将上下文切换已经从4次减少到2次，同时把数据拷贝从4次减少到3次（只有1次 `CPU` 参与，另外2次 `DMA` 引擎完成），那么我们可不可以把这唯一一次CPU参与的数据拷贝也省掉呢？
 如果网卡支持 `gather operations` 内核就可以进一步减少数据拷贝。在 Linux kernels 2.4 及更新的版本，socket 描述符已经为适应这个需求做了变化。现在这个方法不仅减少了上下文切换，而且消除了CPU参与的数据拷贝。API接口是一样的，但是实质已经发生了变化：
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2018-10-27-zero-copy/6.gif)
