@@ -30,7 +30,8 @@ categories:
 ### Final Reference
 当前类是否是`Finalizer`类，注意这里`Finalizer`是由JVM来标志的( 后面简称 *f* 类 )，并不是指`java.lang.ref.Finalizer`类。但是 *f* 类是会被 JVM 注册到`java.lang.ref.Finalizer`类中的。
 - 当前类或父类中含有一个参数为空，返回值为void的名为`finalize()`的方法。
-- 并且该`finalize()`方法必须非空
+- 并且该`finalize()`方法必须非空。
+
 GC 回收问题：
 1. 对象因为`Finalizer`的引用而变成了一个临时的强引用，即使没有其他的强引用，还是无法立即被回收；
 2. 对象至少经历两次GC才能被回收，因为只有在`FinalizerThread`执行完了f对象的`finalize()`方法的情况下才有可能被下次GC回收，而有可能期间已经经历过多次GC了，但是一直还没执行对象的`finalize()`方法；
