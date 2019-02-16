@@ -126,7 +126,8 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 ##### PoolArena
 首先明确两个概念：
 - `PageSize`：可以分配的最小的内存块单位，默认8192。
-- `Chunk`： 一堆Page的集合，`Chunk`的大小=`pageSize` << `maxOrder（默认11`。
+- `Chunk`： 一堆Page的集合，`Chunk`的大小=`pageSize` << `maxOrder（默认11`)。
+
 由于Netty通常应用于高并发系统，不可避免的有多线程进行同时内存分配，可能会极大的影响内存分配的效率，为了缓解线程竞争，可以通过创建多个`PoolArena`细化锁的粒度，提高并发执行的效率，首先我们看看`PoolArena`的内部结构：
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/2184951-c4d3a846c6051aed.png)
 
@@ -146,9 +147,10 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 
 ##### 组件结构图
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/overview.bmp)
-其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00,q100那些链表，这里不详细展开，有个概念就行。
+其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00，q100那些链表，这里不详细展开，有个概念就行。
 
 #### 3. 内存池内存分配流程：
+
 ​1. `ByteBufAllocator` 准备申请一块内存；
 ​2. 尝试`从PoolThreadCache`中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
 ​3. 如果是小块（可配置该值）内存分配，则尝试从`PoolArena`中缓存的`PoolSubpage`中获取内存，如果成功则完成此次分配；
