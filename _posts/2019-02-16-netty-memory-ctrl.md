@@ -96,6 +96,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 原来如此，原来为了提升堆外内存的利用率，又把内存分成了：
 - 基于内存池的`ByteBuf`：优点是可以重用`ByteBuf`对象，通过自己维护一个内存池，可以循环利用创建的`ByteBuf`，提升内存的使用效率，降低由于高负载导致的频繁GC。适用于高负载，高并发的应用中。推荐使用基于内存池的`ByteBuf`。
 - 非内存池的`ByteBuf`：优点是管理和维护相对简单。
+
 当然，通过源码`ByteBufUtil`里能看出来，Netty默认还是使用的`PooledByteBufAllocator`：
 ```java
     static {
@@ -128,13 +129,16 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 - `Chunk`： 一堆Page的集合，`Chunk`的大小=`pageSize` << `maxOrder（默认11`。
 由于Netty通常应用于高并发系统，不可避免的有多线程进行同时内存分配，可能会极大的影响内存分配的效率，为了缓解线程竞争，可以通过创建多个`PoolArena`细化锁的粒度，提高并发执行的效率，首先我们看看`PoolArena`的内部结构：
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/2184951-c4d3a846c6051aed.png)
+
 1. `PoolChunk`：维护一段连续内存，并负责内存块分配与回收。
 2. `PoolSubpage`：将`Page`分为更小的块进行维护；
 3. `PoolChunkList`：维护多个`PoolChunk`的生命周期。
 4. 多个`PoolChunkList`也会形成一个`List`，方便内存的管理。最终由`PoolArena`对这一系列类进行管理，`PoolArena本身`是一个抽象类，其子类为`HeapArena`和`DirectArena`，对应堆内存(Heap Buffer)和堆外内存(Direct Buffer)，除了操作的内存(`byte[]`和`ByteBuffer`)不同外两个类完全一致。
 
 ##### PoolChunk
+我们先来看一幅图
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/Chunk%E5%9B%BE.bmp)
+
 上图一个默认大小的`Chunk`， 由2048个`Page`组成了一个`Chunk`，一个`Page`的大小为8192， `Chunk`之上有12层节点，最后一层节点数与`Page`数量相等。每次内存分配需要保证内存的连续性，这样才能简单的操作分配到的内存，因此这里构造了一颗完整的平衡二叉树，所有子节点的管理的内存也属于其父节点。如果我们想获取一个8K的内存，则只需在第11层找一个可用节点即可，而如果我们需要16K的数据，则需要在第10层找一个可用节点。如果一个节点存在一个已经被分配的子节点，则该节点不能被分配，例如我们需要16K内存，这个时候id为2048的节点已经被分配，id为2049的节点未分配，就不能直接分配1024这个节点，因为这个节点下的内存只有8K了。
 
 ##### PoolSubpage
@@ -142,7 +146,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 
 ##### 组件结构图
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/overview.bmp)
-其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00,q100那些链表，这里不详细展开，有个概念就行
+其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00,q100那些链表，这里不详细展开，有个概念就行。
 
 #### 3. 内存池内存分配流程：
 ​1. `ByteBufAllocator` 准备申请一块内存；
