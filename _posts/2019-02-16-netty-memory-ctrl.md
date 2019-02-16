@@ -137,7 +137,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 4. 多个`PoolChunkList`也会形成一个`List`，方便内存的管理。最终由`PoolArena`对这一系列类进行管理，`PoolArena本身`是一个抽象类，其子类为`HeapArena`和`DirectArena`，对应堆内存(Heap Buffer)和堆外内存(Direct Buffer)，除了操作的内存(`byte[]`和`ByteBuffer`)不同外两个类完全一致。
 
 ##### PoolChunk
-我们先来看一幅图
+我们先来看一幅图：
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/Chunk%E5%9B%BE.bmp)
 
 上图一个默认大小的`Chunk`， 由2048个`Page`组成了一个`Chunk`，一个`Page`的大小为8192， `Chunk`之上有12层节点，最后一层节点数与`Page`数量相等。每次内存分配需要保证内存的连续性，这样才能简单的操作分配到的内存，因此这里构造了一颗完整的平衡二叉树，所有子节点的管理的内存也属于其父节点。如果我们想获取一个8K的内存，则只需在第11层找一个可用节点即可，而如果我们需要16K的数据，则需要在第10层找一个可用节点。如果一个节点存在一个已经被分配的子节点，则该节点不能被分配，例如我们需要16K内存，这个时候id为2048的节点已经被分配，id为2049的节点未分配，就不能直接分配1024这个节点，因为这个节点下的内存只有8K了。
@@ -149,17 +149,16 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 ![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/overview.bmp)
 其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00，q100那些链表，这里不详细展开，有个概念就行。
 
-#### 3. 内存池内存分配流程：
+#### 内存池内存分配流程：
+1. `ByteBufAllocator`准备申请一块内存；
+2. 尝试从PoolThreadCache中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
+3. 如果是小块（可配置该值）内存分配，则尝试从PoolArena中缓存的PoolSubpage中获取内存，如果成功则完成此次分配；
+4. 如果是普通大小的内存分配，则从PoolChunkList中查找可用PoolChunk并进行内存分配，如果没有可用的PoolChunk则创建一个并加入到PoolChunkList中，完成此次内存分配；
+5. 如果是大块（大于一个Chunk的大小）内存分配，则直接分配内存而不用内存池的方式；
+6. 内存使用完成后进行释放，释放的时候首先判断是否和分配的时候是同一个线程，如果是则尝试将其放入PoolThreadCache，这块内存将会在下一次同一个线程申请内存时使用，即前面的步骤2；
+7. 如果不是同一个线程，则回收至Chunk中，此时Chunk中的内存使用率会发生变化，可能导致该Chunk在不同的PoolChunkList中移动，或者整个Chunk回收（Chunk在q000上，且其分配的所有内存被释放）；同时如果释放的是小块内存（与步骤3中描述的内存相同），会尝试将小块内存前置到PoolArena中，这里操作成功了，步骤3的操作中才可能成功。
 
-​1. `ByteBufAllocator` 准备申请一块内存；
-​2. 尝试`从PoolThreadCache`中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
-​3. 如果是小块（可配置该值）内存分配，则尝试从`PoolArena`中缓存的`PoolSubpage`中获取内存，如果成功则完成此次分配；
-​4. 如果是普通大小的内存分配，则从`PoolChunkList`中查找可用`PoolChunk`并进行内存分配，如果没有可用的`PoolChunk`则创建一个并加入到`PoolChunkList`中，完成此次内存分配；
-​5. 如果是大块（大于一个`Chunk`的大小）内存分配，则直接分配内存而不用内存池的方式；
-​6. 内存使用完成后进行释放，释放的时候首先判断是否和分配的时候是同一个线程，如果是则尝试将其放入PoolThreadCache，这块内存将会在下一次同一个线程申请内存时使用，即前面的步骤2；
-​7. 如果不是同一个线程，则回收至`Chunk`中，此时`Chunk`中的内存使用率会发生变化，可能导致该`Chunk`在不同的`PoolChunkList`中移动，或者整个`Chunk`回收（`Chunk`在q000上，且其分配的所有内存被释放）；同时如果释放的是小块内存（与步骤3中描述的内存相同），会尝试将小块内存前置到`PoolArena`中，这里操作成功了，步骤3的操作中才可能成功。
-
-​在`PoolThreadCache`中分了`tinySubPageHeapCaches`、`smallSubPageHeapCaches`、`normalSubPageHeapCaches`三个数组，对应于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page）。
+在`PoolThreadCache`中分了`tinySubPageHeapCaches`、`smallSubPageHeapCaches`、`normalSubPageHeapCaches`三个数组，对应于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page）。
 
 后续博客有时间会深入研究一下各个组件的源码，尽情期待。
 
