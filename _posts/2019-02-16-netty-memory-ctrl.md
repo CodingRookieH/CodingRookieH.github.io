@@ -84,7 +84,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 3. 如果9次尝试后依旧没有足够的可用堆外内存来分配本次堆外内存，则抛出`OutOfMemoryError(“Direct buffer memory”)`异常。
 
 ### Netty内存池
-#### 1. 内存分类
+#### 内存分类
 看来堆外内存的回收是借用了`PhantomReference`引用机制，他的回收时机依赖`DirectByteBuffer`，真相大白，原来堆外内存回收是这么回事。
 那么问题来了，高并发场景下，如果堆外内存回收过慢，那不是很容易出现OOM么？
 是的，很容易出现，我们做`Young GC`的时候会将新生代里的不可达的`DirectByteBuffer`对象及其堆外内存回收了，但是无法对old里的`DirectByteBuffer`对象及其堆外内存进行回收，这也是我们通常碰到的最大的问题。( 并且堆外内存多用于生命期中等或较长的对象 )。
@@ -122,7 +122,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 ```
 
 那么内存池究竟是什么呢？
-#### 2. 内存管理PoolArena、PoolSubpage、PoolChunk
+#### 内存管理PoolArena、PoolSubpage、PoolChunk
 ##### PoolArena
 首先明确两个概念：
 - `PageSize`：可以分配的最小的内存块单位，默认8192。
@@ -150,6 +150,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 其中`link list`就是各个`PoolChunkList`的链表，在`PoolArena`中进行维护，也就是俗称的那些q00，q100那些链表，这里不详细展开，有个概念就行。
 
 #### 内存池内存分配流程：
+看完上述，最后总结一下Netty的内存分配流程：
 1. `ByteBufAllocator`准备申请一块内存；
 2. 尝试从PoolThreadCache中获取可用内存，如果成功则完成此次分配，否则继续往下走，注意后面的内存分配都会加锁；
 3. 如果是小块（可配置该值）内存分配，则尝试从PoolArena中缓存的PoolSubpage中获取内存，如果成功则完成此次分配；
@@ -159,6 +160,5 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 7. 如果不是同一个线程，则回收至Chunk中，此时Chunk中的内存使用率会发生变化，可能导致该Chunk在不同的PoolChunkList中移动，或者整个Chunk回收（Chunk在q000上，且其分配的所有内存被释放）；同时如果释放的是小块内存（与步骤3中描述的内存相同），会尝试将小块内存前置到PoolArena中，这里操作成功了，步骤3的操作中才可能成功。
 
 在`PoolThreadCache`中分了`tinySubPageHeapCaches`、`smallSubPageHeapCaches`、`normalSubPageHeapCaches`三个数组，对应于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page）。
-
 后续博客有时间会深入研究一下各个组件的源码，尽情期待。
 
