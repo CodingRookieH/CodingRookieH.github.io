@@ -159,6 +159,7 @@ address表示分配的堆外内存的地址，JNI后续的调用也是用的这�
 6. 内存使用完成后进行释放，释放的时候首先判断是否和分配的时候是同一个线程，如果是则尝试将其放入PoolThreadCache，这块内存将会在下一次同一个线程申请内存时使用，即前面的步骤2；
 7. 如果不是同一个线程，则回收至Chunk中，此时Chunk中的内存使用率会发生变化，可能导致该Chunk在不同的PoolChunkList中移动，或者整个Chunk回收（Chunk在q000上，且其分配的所有内存被释放）；同时如果释放的是小块内存（与步骤3中描述的内存相同），会尝试将小块内存前置到PoolArena中，这里操作成功了，步骤3的操作中才可能成功。
 
-在`PoolThreadCache`中分了`tinySubPageHeapCaches`、`smallSubPageHeapCaches`、`normalSubPageHeapCaches`三个数组，对应于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page）。
+在`PoolThreadCache`中分了`tinySubPageHeapCaches`、`smallSubPageHeapCaches`、`normalSubPageHeapCaches`三个数组，对应于tiny\small\normal在内存分配上的不同（tiny和small使用subpage,normal使用page），整个Netty内存池的数据结构如下图所示：
+![placeholder](https://raw.githubusercontent.com/CodingRookieH/blog-image/master/2019-02-12-netty-memory-ctrl/Netty%E5%86%85%E5%AD%98%E6%B1%A0%E7%A4%BA%E6%84%8F%E5%9B%BE.png)
 后续博客有时间会深入研究一下各个组件的源码，尽情期待。
 
